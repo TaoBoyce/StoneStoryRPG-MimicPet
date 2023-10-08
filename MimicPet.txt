@@ -1,0 +1,173 @@
+/*
+Bouncing Mimic Pet
+written by Bitty45
+art by Tag
+version 1.0.0
+
+A mimic friend to bounce alongside you!
+*/
+
+//EDITABLE VALUES=======================
+var MIMICCOLOR = #rainFF
+var MAXDIST = 15 //triggers a jump if X is farther than this
+var MINDIST = 3 //how close it will try to jump to the player
+var MAXJUMP = 5 //how high it will jump
+var MAXZDIST = 5 //triggers a jump if Z is farther than this
+//what percent it will travel towards targetX per frame, min of 1 char
+var MOVEPERCENT = 0.10
+
+//ART===================================
+//state SIT
+var mimicSit = ascii
+#,——.
+#[]"]
+asciiend
+
+//state JUMP
+var mimicJump = ascii
+(,`7`
+#V_"/
+asciiend
+
+//state JUMP mouth closed
+var mimicJumpClosed = ascii
+#,——.
+#V_"/
+asciiend
+
+//state OPEN
+var mimicOpen = ascii
+(`7`
+#[]"]
+asciiend
+
+//state FALL
+var mimicFall = ascii
+(^`"\
+#V__7
+asciiend 
+
+
+//MAIN CODE=============================
+var mimicJumping = false
+var mimicState
+var mimicX
+var mimicY
+var mimicZ
+var mimicPrevX
+var mimicPrevY
+var mimicPrevZ
+var targetX
+var targetY
+var targetZ
+var playerX
+var playerY
+var playerZ
+ 
+//update
+playerX = pos.x 
+playerY = pos.y
+playerZ = pos.z
+//reset
+?loc.begin | loc.loop | playerX < mimicX - MAXDIST
+  MimicDefaultState()
+  mimicX = playerX - MINDIST
+  mimicY = playerY
+  mimicZ = playerZ
+
+//main loop
+:?!mimicJumping
+  //start jump
+  ?playerX - mimicX > MAXDIST | math.Abs(playerZ - mimicZ) > MAXZDIST
+    mimicJumping = true
+    mimicPrevX = mimicX
+    mimicPrevY = mimicY
+    mimicPrevZ = mimicZ
+    targetX = playerX - MINDIST
+    targetY = playerY
+    targetZ = playerZ
+    mimicState = mimicJump
+: 
+  //currently jumping
+  mimicZ += getZChange()
+  mimicY = getJumpYArch()
+  mimicX = mimicX + getXChange()
+  mimicState = getAnimationState()
+  ?targetX - mimicX < 1
+    MimicDefaultState()
+
+PrintMimic()
+
+
+//FUNCTIONS=============================
+func getAnimationState()
+  var percent = getPercentToTarget()
+  ?percent <= 0.4
+    return mimicJump
+  :?percent <= 0.6
+    return mimicOpen
+  :
+    return mimicFall
+
+func PrintMimic()
+  var printX
+  var printY
+  printX = mimicX + 30 - screen.i*69
+  printY = mimicY + mimicZ
+  >`@printX@,@printY@,@MIMICCOLOR@,@mimicState@
+  
+  /*
+  //test printing
+  >`0,2,mimic print coord: @printX@,@printY@
+  >`0,3,jumping @mimicJumping@
+  >`0,4,player @playerX@,@playerY@,@playerZ@
+  >`0,5,mimic coord: @mimicX@,@mimicY@,@mimicZ@
+  >`0,6,mimic prev coord: @mimicPrevX@,@mimicPrevY@,@mimicPrevZ@
+  >`0,7,target coord: @targetX@,@targetY@,@targetZ@
+  >`0,8,percent to target: @getPercentToTarget()@
+  */
+
+
+func MimicDefaultState()
+  mimicJumping = false
+  mimicState = mimicSit
+  mimicPrevX = mimicX
+  mimicPrevY = mimicY
+  mimicPrevZ = mimicZ   
+  targetX = playerX - MINDIST
+  targetY = playerY
+  targetZ = playerZ
+
+func getPercentToTarget()
+  var part = mimicX - mimicPrevX
+  var whole = targetX - mimicPrevX
+  var percent = (part*1.0)/(whole*1.0)
+  return percent
+
+func getJumpYArch()
+  //creates a parabola between start and end points, with max height
+  //a = -jumpheight / (( mid - start )( mid - end ))
+  //(y(x) = ( x - start )( x - end )a
+  var MidMinusStart = getMidpoint()-mimicPrevX
+  var MidMinusEnd = getMidpoint()-targetX
+  var multi = (-MAXJUMP)/(MidMinusStart*MidMinusEnd)
+  var XMinusStart = mimicX-mimicPrevX
+  var XMinusEnd = mimicX-targetX
+  var result = XMinusStart*XMinusEnd*multi
+  return math.Round(result)
+  
+func getMidpoint()
+  return mimicPrevX + (targetX - mimicPrevX)/2
+
+func getXChange()
+  //how many characters mimic will move per frame
+  //start distance * MOVEPERCENT, rounded, minimum 1
+  return math.Max(1,math.Round((targetX-mimicX)*MOVEPERCENT))
+  
+func getZChange()
+  ?mimicZ < targetZ
+    return 1
+  :?mimicZ > targetZ
+    return -1
+  :
+    return 0
