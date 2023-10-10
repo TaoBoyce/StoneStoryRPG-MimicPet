@@ -1,0 +1,194 @@
+/*
+Bouncing Pet Base
+written by Bitty45
+version 1.0.0
+
+A base for bouncing pets, to make them super easy to make.
+Override EDITABLE VALUES and ART with what you want for your own pet.
+Be sure that if you're using this, to use 'new',
+    otherwise your pet may conflict with others using this base.
+example: var pet = new BouncingPetBase
+Also, make sure to call Main() in your script
+example: pet.Main()
+see MimicPet for a more in depth example of how to use it.
+*/
+
+//EDITABLE VALUES=======================
+var PET_COLOR = #ffffff
+var MAX_DIST = 15 //triggers a jump if X is farther than this
+var MIN_DIST = 3 //how close it will try to jump to the player
+var MAX_JUMP = 5 //how high it will jump
+var MAX_Z_DIST = 5 //triggers a jump if Z is farther than this
+//what percent it will travel towards targetX per frame, min of 1 char
+var MOVE_PERCENT = 0.10
+
+var PRINT_X_OFFSET = 0 //offsets the X of the print
+var PRINT_Y_OFFSET = 0 //offsets the Y of the print
+
+/*
+The animation system is based on how far in the jump the pet is, in percent
+the default holds the jump art from 0%-40%, the peak art from 40%-60%,
+    the fall art from 60%-100%.
+*/
+//start of jump animation, dictates how long it'll hold the jump animation
+//goes from 0% to JUMP_ANIM_PERCENT
+var JUMP_ANIM_PERCENT = 0.4
+//start of peak animation, dictates how long it'll hold the peak animation
+//goes from JUMP_ANIM_PERCENT to PEAK_ANIM_PERCENT
+var PEAK_ANIM_PERCENT = 0.6
+//fall animation is whatever percent is left over
+//goes from PEAK_ANIM_PERCENT to 100%
+
+//ART===================================
+//Keep art the same size, otherwise it may look weird
+
+//state SIT
+var petSit = ascii
+#
+#
+asciiend
+
+//state JUMP
+var petJump = ascii
+#
+#
+asciiend
+
+//state PEAK
+var petPeak = ascii
+#
+#
+asciiend
+
+//state FALL
+var petFall = ascii
+#
+#
+asciiend 
+
+
+//MAIN CODE=============================
+var petJumping = false
+var petState
+var petX
+var petY
+var petZ
+var petPrevX
+var petPrevY
+var petPrevZ
+var targetX
+var targetY
+var targetZ
+var playerX
+var playerY
+var playerZ
+ 
+func Main()
+  //update
+  playerX = pos.x 
+  playerY = pos.y
+  playerZ = pos.z
+  //reset
+  ?loc.begin | loc.loop | playerX < petX - MAX_DIST
+    PetDefaultState()
+    petX = playerX - MIN_DIST
+    petY = playerY
+    petZ = playerZ
+  
+  //main loop
+  :?!petJumping
+    //start jump
+    ?playerX - petX > MAX_DIST | math.Abs(playerZ - petZ) > MAX_Z_DIST
+      petJumping = true
+      petPrevX = petX
+      petPrevY = petY
+      petPrevZ = petZ
+      targetX = playerX - MIN_DIST
+      targetY = playerY
+      targetZ = playerZ
+      petState = petJump
+  : 
+    //currently jumping
+    petZ += getZChange()
+    petY = getJumpYArch()
+    petX = petX + getXChange()
+    petState = getAnimationState()
+    ?targetX - petX < 1
+      PetDefaultState()
+  
+  PrintPet()
+
+
+//FUNCTIONS=============================
+func getAnimationState()
+  var percent = getPercentToTarget()
+  ?percent <= JUMP_ANIM_PERCENT
+    return petJump
+  :?percent <= PEAK_ANIM_PERCENT
+    return petPeak
+  :
+    return petFall
+
+func PrintPet()
+  var printX
+  var printY
+  printX = petX + 30 - screen.x + PRINT_X_OFFSET
+  printY = petY + petZ + PRINT_Y_OFFSET
+  >`@printX@,@printY@,@PET_COLOR@,@petState@
+  
+  /*
+  //test printing
+  >`0,2,pet print coord: @printX@,@printY@
+  >`0,3,jumping @petJumping@
+  >`0,4,player @playerX@,@playerY@,@playerZ@
+  >`0,5,pet coord: @petX@,@petY@,@petZ@
+  >`0,6,pet prev coord: @petPrevX@,@petPrevY@,@petPrevZ@
+  >`0,7,target coord: @targetX@,@targetY@,@targetZ@
+  >`0,8,percent to target: @getPercentToTarget()@
+  */
+
+
+func PetDefaultState()
+  petJumping = false
+  petState = petSit
+  petPrevX = petX
+  petPrevY = petY
+  petPrevZ = petZ   
+  targetX = playerX - MIN_DIST
+  targetY = playerY
+  targetZ = playerZ
+
+func getPercentToTarget()
+  var part = petX - petPrevX
+  var whole = targetX - petPrevX
+  var percent = (part*1.0)/(whole*1.0)
+  return percent
+
+func getJumpYArch()
+  //creates a parabola between start and end points, with max height
+  //a = -jumpheight / (( mid - start )( mid - end ))
+  //(y(x) = ( x - start )( x - end )a
+  var MidMinusStart = getMidpoint()-petPrevX
+  var MidMinusEnd = getMidpoint()-targetX
+  var multi = (-MAX_JUMP)/(MidMinusStart*MidMinusEnd)
+  var XMinusStart = petX-petPrevX +1
+  var XMinusEnd = petX-targetX +1
+  var result = XMinusStart*XMinusEnd*multi
+  return math.Round(result)
+  
+func getMidpoint()
+  return petPrevX + (targetX - petPrevX)/2
+
+func getXChange()
+  //how many characters pet will move per frame
+  //start distance * MOVE_PERCENT, rounded, minimum 1
+  return math.Max(1,math.Round((targetX-petX)*MOVE_PERCENT))
+  
+func getZChange()
+  //moves pet towards or away from foreground
+  ?petZ < targetZ
+    return 1
+  :?petZ > targetZ
+    return -1
+  :
+    return 0
