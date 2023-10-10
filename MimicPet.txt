@@ -2,7 +2,7 @@
 Bouncing Mimic Pet
 written by Bitty45
 art by Tag
-version 1.0.0
+version 1.1.0
 
 A mimic friend to bounce alongside you!
 To use it, you simply need to import it (see stonescript manual on importing)
