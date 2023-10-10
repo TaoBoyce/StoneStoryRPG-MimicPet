@@ -5,6 +5,8 @@ art by Tag
 version 1.0.0
 
 A mimic friend to bounce alongside you!
+To use it, you simply need to import it (see stonescript manual on importing)
+If you're on mobile, then copy paste the entire script into your mindstone.
 */
 
 //EDITABLE VALUES=======================
@@ -112,8 +114,8 @@ func getAnimationState()
 func PrintMimic()
   var printX
   var printY
-  printX = mimicX + 30 - screen.i*69
-  printY = mimicY + mimicZ
+  printX = mimicX + 30 - screen.x +4
+  printY = mimicY + mimicZ -1
   >`@printX@,@printY@,@MIMICCOLOR@,@mimicState@
   
   /*
@@ -151,8 +153,8 @@ func getJumpYArch()
   var MidMinusStart = getMidpoint()-mimicPrevX
   var MidMinusEnd = getMidpoint()-targetX
   var multi = (-MAXJUMP)/(MidMinusStart*MidMinusEnd)
-  var XMinusStart = mimicX-mimicPrevX
-  var XMinusEnd = mimicX-targetX
+  var XMinusStart = mimicX-mimicPrevX+1
+  var XMinusEnd = mimicX-targetX+1
   var result = XMinusStart*XMinusEnd*multi
   return math.Round(result)
   
