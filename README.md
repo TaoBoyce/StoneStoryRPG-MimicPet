@@ -1,11 +1,12 @@
 # StoneStoryRPG-MimicPet
-A nice mimic friend to bounce alongside you in Stone Story RPG!
+A nice mimic friend to bounce alongside you in Stone Story RPG!  
 
 - Written by Bitty45
 - Art by Tag
-- Version 1.0.0
+- Version 1.1.0
 
 ## To use
-If you're on PC, you can download the txt file and put it into your stonescript imports. (see stonescript manual)
+There are actually two versions here, one that uses BouncingPetBase, and one that doesn't.  
+The BouncingPetBase version is incompatible with mobile, unless it gets added to the official cosmetics one day.
 
-If you're on mobile, you can copy paste the entire txt file into your mindstone.
+Both versions have instructions on how to use them inside the txt.
