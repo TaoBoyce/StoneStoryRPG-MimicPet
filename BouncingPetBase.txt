@@ -1,7 +1,7 @@
 /*
 Bouncing Pet Base
 written by Bitty45
-version 1.0.0
+version 1.2.0
 
 A base for bouncing pets, to make them super easy to make.
 Override EDITABLE VALUES and ART with what you want for your own pet.
@@ -16,11 +16,12 @@ see MimicPet for a more in depth example of how to use it.
 //EDITABLE VALUES=======================
 var PET_COLOR = #ffffff
 var MAX_DIST = 15 //triggers a jump if X is farther than this
-var MIN_DIST = 3 //how close it will try to jump to the player
+var MAX_DIST_BOSS = 30 //same as MAX_DIST, but against bosses
+var MIN_DIST = 3 //how close it will try to jump to the player, can go over
 var MAX_JUMP = 5 //how high it will jump
 var MAX_Z_DIST = 5 //triggers a jump if Z is farther than this
-//what percent it will travel towards targetX per frame, min of 1 char
-var MOVE_PERCENT = 0.10
+//how fast it'll move towards targetX, getting slower as it approaches targetX (min of 1)
+var MOVE_PERCENT = 0.05
 
 var PRINT_X_OFFSET = 0 //offsets the X of the print
 var PRINT_Y_OFFSET = 0 //offsets the Y of the print
@@ -43,62 +44,102 @@ var PEAK_ANIM_PERCENT = 0.6
 //Keep art the same size, otherwise it may look weird
 
 //state SIT
-var petSit = ascii
+var petSit = ui.AddAnim(ascii
 #
 #
-asciiend
+asciiend)
 
 //state JUMP
-var petJump = ascii
+var petJump = ui.AddAnim(ascii
 #
 #
-asciiend
+asciiend)
 
 //state PEAK
-var petPeak = ascii
+var petPeak = ui.AddAnim(ascii
 #
 #
-asciiend
+asciiend)
 
 //state FALL
-var petFall = ascii
+var petFall = ui.AddAnim(ascii
 #
 #
-asciiend 
+asciiend)
 
 
 //MAIN CODE=============================
 var petJumping = false
-var petState
-var petX
-var petY
-var petZ
+var playerX = pos.x 
+var playerY = pos.y
+var playerZ = pos.z
+var petX = playerX - MIN_DIST
+var petY = playerY
+var petZ = playerZ
 var petPrevX
 var petPrevY
 var petPrevZ
 var targetX
 var targetY
 var targetZ
-var playerX
-var playerY
-var playerZ
- 
+var petPnl
+var totTime
+var notRocky = (loc ! rocky)
+
+func initBouncePet()
+  var addAndInitAnim = func(anim, y, dur, loop)
+    petPnl.Add(anim)
+    anim.anchor = top_left
+    anim.dock = top_left
+    anim.x = 0
+    anim.y = y
+    anim.duration = dur
+    anim.loop = loop
+    anim.color = PET_COLOR
+    anim.Play()
+  
+  petPnl = ui.AddPanel()
+  petPnl.h = 1
+  petPnl.w = 1
+  petPnl.style = 0
+  petPnl.anchor = top_left
+  petPnl.dock = top_left
+  addAndInitAnim(petSit, 0, 40, true)
+  addAndInitAnim(petJump, 0, 40, true)
+  addAndInitAnim(petPeak, 0, 40, true)
+  addAndInitAnim(petFall, 0, 40, true)
+  PetDefaultState()
+  
 func Main()
   //update
+  totTime = totalTime
   playerX = pos.x 
   playerY = pos.y
   playerZ = pos.z
+  
   //reset
-  ?loc.begin | loc.loop | playerX < petX - MAX_DIST
+  ?!petPnl
+    initBouncePet()
+    
+  ?totTime = 1 | time = 1 & notRocky
     PetDefaultState()
     petX = playerX - MIN_DIST
     petY = playerY
     petZ = playerZ
-  
+      
   //main loop
-  :?!petJumping
+  ?petJumping
+    //currently jumping
+    petZ += getZChange()
+    petX += getXChange()
+    ?targetX - petPrevX > 0 //only jumps if target is further than 0
+      petY = getJumpYArch()
+    setAnimation()
+    ?targetX - petX < 1
+      PetDefaultState()
+  : 
     //start jump
-    ?playerX - petX > MAX_DIST | math.Abs(playerZ - petZ) > MAX_Z_DIST
+    ?!nearPlayer()
       petJumping = true
       petPrevX = petX
       petPrevY = petY
@@ -106,51 +147,38 @@ func Main()
       targetX = playerX - MIN_DIST
       targetY = playerY
       targetZ = playerZ
-      petState = petJump
-  : 
-    //currently jumping
-    petZ += getZChange()
-    petY = getJumpYArch()
-    petX = petX + getXChange()
-    petState = getAnimationState()
-    ?targetX - petX < 1
-      PetDefaultState()
+      petJump.visible = true
+      petSit.visible = false
   
   PrintPet()
 
+func nearPlayer()
+  ?foe = boss
+    ?foe = bronze_guardian
+      return (playerX - petX < MAX_DIST_BOSS) | (foe.distance < 25)
+    :
+      return playerX - petX < MAX_DIST_BOSS
+  :
+    return playerX - petX < MAX_DIST & math.Abs(playerZ - petZ) < MAX_Z_DIST
 
-//FUNCTIONS=============================
-func getAnimationState()
+func setAnimation()
   var percent = getPercentToTarget()
   ?percent <= JUMP_ANIM_PERCENT
-    return petJump
+    petSit.visible = false
+    petJump.visible = true
   :?percent <= PEAK_ANIM_PERCENT
-    return petPeak
+    petJump.visible = false
+    petPeak.visible = true
   :
-    return petFall
-
-func PrintPet()
-  var printX
-  var printY
-  printX = petX + 30 - screen.x + PRINT_X_OFFSET
-  printY = petY + petZ + PRINT_Y_OFFSET
-  >`@printX@,@printY@,@PET_COLOR@,@petState@
-  
-  /*
-  //test printing
-  >`0,2,pet print coord: @printX@,@printY@
-  >`0,3,jumping @petJumping@
-  >`0,4,player @playerX@,@playerY@,@playerZ@
-  >`0,5,pet coord: @petX@,@petY@,@petZ@
-  >`0,6,pet prev coord: @petPrevX@,@petPrevY@,@petPrevZ@
-  >`0,7,target coord: @targetX@,@targetY@,@targetZ@
-  >`0,8,percent to target: @getPercentToTarget()@
-  */
-
+    petPeak.visible = false
+    petFall.visible = true
 
 func PetDefaultState()
   petJumping = false
-  petState = petSit
+  petSit.visible = true
+  petJump.visible = false
+  petPeak.visible = false
+  petFall.visible = false
   petPrevX = petX
   petPrevY = petY
   petPrevZ = petZ   
@@ -171,18 +199,18 @@ func getJumpYArch()
   var MidMinusStart = getMidpoint()-petPrevX
   var MidMinusEnd = getMidpoint()-targetX
   var multi = (-MAX_JUMP)/(MidMinusStart*MidMinusEnd)
-  var XMinusStart = petX-petPrevX +1
-  var XMinusEnd = petX-targetX +1
+  var XMinusStart = petX-petPrevX
+  var XMinusEnd = petX-targetX
   var result = XMinusStart*XMinusEnd*multi
-  return math.Round(result)
+  return math.RoundToInt(result)
   
 func getMidpoint()
-  return petPrevX + (targetX - petPrevX)/2
+  return petPrevX + (targetX - petPrevX)/2.0
 
 func getXChange()
   //how many characters pet will move per frame
   //start distance * MOVE_PERCENT, rounded, minimum 1
-  return math.Max(1,math.Round((targetX-petX)*MOVE_PERCENT))
+  return math.Max(1,math.RoundToInt((targetX-petX)*MOVE_PERCENT))
   
 func getZChange()
   //moves pet towards or away from foreground
@@ -192,3 +220,23 @@ func getZChange()
     return -1
   :
     return 0
+    
+func PrintPet()
+  var printX
+  var printY
+  printX = screen.FromWorldX(petX + PRINT_X_OFFSET)
+  printY = screen.FromWorldZ(petY + petZ + PRINT_Y_OFFSET)
+  petPnl.x = printX
+  petPnl.y = printY
+  
+  /*
+  //test printing
+  >`0,4,pet print coord: @printX@,@printY@
+  >`0,5,panel: @petPnl.x@,@petPnl.y@
+  >`0,6,player screen coord: @screen.FromWorldX(playerX)@,@screen.FromWorldZ(playerZ-playerY)@
+  >`0,7,player @playerX@,@playerY@,@playerZ@
+  >`0,8,pet coord: @petX@,@petY@,@petZ@
+  >`0,9,pet prev coord: @petPrevX@,@petPrevY@,@petPrevZ@
+  >`0,10,target coord: @targetX@,@targetY@,@targetZ@
+  >`0,11,percent to target: @getPercentToTarget@
+  */

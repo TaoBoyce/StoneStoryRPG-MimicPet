@@ -1,175 +1,71 @@
 /*
-Bouncing Mimic Pet
+Bouncing Mimic Pet (using BouncingPetBase)
 written by Bitty45
 art by Tag
-version 1.1.0
+version 1.2.0
 
 A mimic friend to bounce alongside you!
-To use it, you simply need to import it (see stonescript manual on importing)
-If you're on mobile, then copy paste the entire script into your mindstone.
+How to use: import MimicPet
+This version requires BouncingPetBase and won't work without it,
+    it has to be in the same folder.
+If you're on mobile, sorry! This version won't work for you.
+
+to change the color or anything else, you can do this:
+var Mimic=import MimicPet
+var MimicBase = Mimic.PetBase
+MimicBase.PET_COLOR = #ffffff
+MimicBase.Main()
 */
 
+var PetBase = new BouncingPetBase
+
+?totalTime = 1
 //EDITABLE VALUES=======================
-var MIMICCOLOR = #rainFF
-var MAXDIST = 15 //triggers a jump if X is farther than this
-var MINDIST = 3 //how close it will try to jump to the player
-var MAXJUMP = 5 //how high it will jump
-var MAXZDIST = 5 //triggers a jump if Z is farther than this
-//what percent it will travel towards targetX per frame, min of 1 char
-var MOVEPERCENT = 0.10
+  PetBase.PET_COLOR = #rainFF
+  PetBase.MAX_DIST = 17 //triggers a jump if X is farther than this
+  PetBase.MAX_DIST_BOSS = 30 //same as MAX_DIST, but against bosses
+  PetBase.MIN_DIST = 3 //how close it will try to jump to the player, can go over
+  PetBase.MAX_JUMP = 5 //how high it will jump
+  PetBase.MAX_Z_DIST = 5 //triggers a jump if Z is farther than this
+  //what percent it will travel towards targetX per frame, min of 1 char
+  PetBase.MOVE_PERCENT = 0.10
+  
+  PetBase.PRINT_X_OFFSET = -4 //offsets the print, should be about the width of the art
+  PetBase.PRINT_Y_OFFSET = -1 //offsets the print, should be about the height of the art
+  PetBase.JUMP_ANIM_PERCENT = 0.4 //what percent it will hold the jump animation
+  PetBase.PEAK_ANIM_PERCENT = 0.6 //what percent it will hold the peak animation
+  //fall animation is what percent is left over
 
 //ART===================================
-//state SIT
-var mimicSit = ascii
+
+  //state SIT
+  PetBase.petSit = ui.AddAnim(ascii
 #,——.
 #[]"]
-asciiend
-
-//state JUMP
-var mimicJump = ascii
-(,`7`
-#V_"/
-asciiend
-
-//state JUMP mouth closed
-var mimicJumpClosed = ascii
-#,——.
-#V_"/
-asciiend
-
-//state OPEN
-var mimicOpen = ascii
+%%
 (`7`
 #[]"]
-asciiend
-
-//state FALL
-var mimicFall = ascii
+asciiend)
+  
+  //state JUMP
+  PetBase.petJump = ui.AddAnim(ascii
+#,——.
+#V_"/
+%%
+(,`7`
+#V_"/
+asciiend)
+  
+  //state OPEN
+  PetBase.petPeak = ui.AddAnim(ascii
+(`7`
+#[]"]
+asciiend)
+  
+  //state FALL
+  PetBase.petFall = ui.AddAnim(ascii
 (^`"\
 #V__7
-asciiend 
+asciiend)
 
-
-//MAIN CODE=============================
-var mimicJumping = false
-var mimicState
-var mimicX
-var mimicY
-var mimicZ
-var mimicPrevX
-var mimicPrevY
-var mimicPrevZ
-var targetX
-var targetY
-var targetZ
-var playerX
-var playerY
-var playerZ
- 
-//update
-playerX = pos.x 
-playerY = pos.y
-playerZ = pos.z
-//reset
-?loc.begin | loc.loop | playerX < mimicX - MAXDIST
-  MimicDefaultState()
-  mimicX = playerX - MINDIST
-  mimicY = playerY
-  mimicZ = playerZ
-
-//main loop
-:?!mimicJumping
-  //start jump
-  ?playerX - mimicX > MAXDIST | math.Abs(playerZ - mimicZ) > MAXZDIST
-    mimicJumping = true
-    mimicPrevX = mimicX
-    mimicPrevY = mimicY
-    mimicPrevZ = mimicZ
-    targetX = playerX - MINDIST
-    targetY = playerY
-    targetZ = playerZ
-    mimicState = mimicJump
-: 
-  //currently jumping
-  mimicZ += getZChange()
-  mimicY = getJumpYArch()
-  mimicX = mimicX + getXChange()
-  mimicState = getAnimationState()
-  ?targetX - mimicX < 1
-    MimicDefaultState()
-
-PrintMimic()
-
-
-//FUNCTIONS=============================
-func getAnimationState()
-  var percent = getPercentToTarget()
-  ?percent <= 0.4
-    return mimicJump
-  :?percent <= 0.6
-    return mimicOpen
-  :
-    return mimicFall
-
-func PrintMimic()
-  var printX
-  var printY
-  printX = mimicX + 30 - screen.x +4
-  printY = mimicY + mimicZ -1
-  >`@printX@,@printY@,@MIMICCOLOR@,@mimicState@
-  
-  /*
-  //test printing
-  >`0,2,mimic print coord: @printX@,@printY@
-  >`0,3,jumping @mimicJumping@
-  >`0,4,player @playerX@,@playerY@,@playerZ@
-  >`0,5,mimic coord: @mimicX@,@mimicY@,@mimicZ@
-  >`0,6,mimic prev coord: @mimicPrevX@,@mimicPrevY@,@mimicPrevZ@
-  >`0,7,target coord: @targetX@,@targetY@,@targetZ@
-  >`0,8,percent to target: @getPercentToTarget()@
-  */
-
-
-func MimicDefaultState()
-  mimicJumping = false
-  mimicState = mimicSit
-  mimicPrevX = mimicX
-  mimicPrevY = mimicY
-  mimicPrevZ = mimicZ   
-  targetX = playerX - MINDIST
-  targetY = playerY
-  targetZ = playerZ
-
-func getPercentToTarget()
-  var part = mimicX - mimicPrevX
-  var whole = targetX - mimicPrevX
-  var percent = (part*1.0)/(whole*1.0)
-  return percent
-
-func getJumpYArch()
-  //creates a parabola between start and end points, with max height
-  //a = -jumpheight / (( mid - start )( mid - end ))
-  //(y(x) = ( x - start )( x - end )a
-  var MidMinusStart = getMidpoint()-mimicPrevX
-  var MidMinusEnd = getMidpoint()-targetX
-  var multi = (-MAXJUMP)/(MidMinusStart*MidMinusEnd)
-  var XMinusStart = mimicX-mimicPrevX+1
-  var XMinusEnd = mimicX-targetX+1
-  var result = XMinusStart*XMinusEnd*multi
-  return math.Round(result)
-  
-func getMidpoint()
-  return mimicPrevX + (targetX - mimicPrevX)/2
-
-func getXChange()
-  //how many characters mimic will move per frame
-  //start distance * MOVEPERCENT, rounded, minimum 1
-  return math.Max(1,math.Round((targetX-mimicX)*MOVEPERCENT))
-  
-func getZChange()
-  ?mimicZ < targetZ
-    return 1
-  :?mimicZ > targetZ
-    return -1
-  :
-    return 0
+PetBase.Main()
