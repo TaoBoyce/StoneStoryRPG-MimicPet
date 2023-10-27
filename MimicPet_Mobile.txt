@@ -1,0 +1,193 @@
+/*
+Bouncing Mimic Pet
+written by Bitty45
+art by Tag
+version 1.2.1
+
+A mimic friend to bounce alongside you!
+To use it, you simply need to import it 
+(see stonescript manual on importing)
+If you're on mobile, then copy paste the 
+entire script into your mindstone.
+*/
+
+//EDITABLE VALUES=======================
+var MIMICCOLOR = #rainFF
+//triggers a jump if X is farther than this
+var MIMICMAXDIST = 17 
+//how close it will try to jump to the player
+var MIMICMINDIST = 3 
+//how high it will jump
+var MIMICMAXJUMP = 5 
+//triggers a jump if Z is farther than this
+var MIMICMAXZDIST = 5 
+//what percent it will travel towards 
+//mimicTargetX per frame, min of 1 char
+var MIMICMOVEPERCENT = 0.10
+
+//ART===================================
+//state SIT
+var mimicSit = ascii
+#,——.
+#[]"]
+asciiend
+
+//state JUMP
+var mimicJump = ascii
+(,`7`
+#V_"/
+asciiend
+
+//state JUMP mouth closed
+var mimicJumpClosed = ascii
+#,——.
+#V_"/
+asciiend
+
+//state OPEN
+var mimicOpen = ascii
+(`7`
+#[]"]
+asciiend
+
+//state FALL
+var mimicFall = ascii
+(^`"\
+#V__7
+asciiend 
+
+
+//MAIN CODE=============================
+var mimicJumping = false
+var mimicState
+var mimicX
+var mimicY
+var mimicZ
+var mimicPrevX
+var mimicPrevY
+var mimicPrevZ
+var mimicTargetX
+var mimicTargetY
+var mimicTargetZ
+var mimicPlayerX
+var mimicPlayerY
+var mimicPlayerZ
+ 
+//update
+mimicPlayerX = pos.x 
+mimicPlayerY = pos.y
+mimicPlayerZ = pos.z
+//reset
+?loc.begin | loc.loop | 
+^mimicPlayerX < mimicX - MIMICMAXDIST
+  MimicDefaultState()
+  mimicX = mimicPlayerX - MIMICMINDIST
+  mimicY = mimicPlayerY
+  mimicZ = mimicPlayerZ
+
+//main loop
+:?!mimicJumping
+  //start jump
+  ?mimicPlayerX - mimicX > MIMICMAXDIST | 
+  ^math.Abs(mimicPlayerZ - mimicZ) > MIMICMAXZDIST
+    mimicJumping = true
+    mimicPrevX = mimicX
+    mimicPrevY = mimicY
+    mimicPrevZ = mimicZ
+    mimicTargetX = mimicPlayerX - MIMICMINDIST
+    mimicTargetY = mimicPlayerY
+    mimicTargetZ = mimicPlayerZ
+    mimicState = mimicJump
+: 
+  //currently jumping
+  mimicZ += getZChange()
+  mimicY = getJumpYArch()
+  mimicX = mimicX + getXChange()
+  mimicState = getAnimationState()
+  ?mimicTargetX - mimicX < 1
+    MimicDefaultState()
+
+PrintMimic()
+
+
+//FUNCTIONS=============================
+func getAnimationState()
+  var percent = getPercentToTarget()
+  ?percent <= 0.4
+    return mimicJump
+  :?percent <= 0.6
+    return mimicOpen
+  :
+    return mimicFall
+
+func PrintMimic()
+  var printX
+  var printY
+  var playerScreenX = 
+  ^screen.FromWorldX(mimicPlayerX)
+  var playerScreenY = 
+  ^screen.FromWorldZ(mimicPlayerZ-mimicPlayerY)
+  printX = mimicX + 30 - screen.x +4 - playerScreenX
+  printY = mimicY + mimicZ +2 - playerScreenY
+  >o@printX@,@printY@,@MIMICCOLOR@,@mimicState@
+  
+  /*
+  //test printing
+  >`0,2,mimic print coord: @printX@,@printY@
+  >`0,3,jumping @mimicJumping@
+  >`0,4,player @mimicPlayerX@,
+  ^@mimicPlayerY@,@mimicPlayerZ@
+  >`0,5,mimic coord: @mimicX@,
+  ^@mimicY@,@mimicZ@
+  >`0,6,mimic prev coord: 
+  ^@mimicPrevX@,@mimicPrevY@,@mimicPrevZ@
+  >`0,7,target coord: @mimicTargetX@,
+  ^@mimicTargetY@,@mimicTargetZ@
+  >`0,8,percent to target: @getPercentToTarget()@
+  */
+
+
+func MimicDefaultState()
+  mimicJumping = false
+  mimicState = mimicSit
+  mimicPrevX = mimicX
+  mimicPrevY = mimicY
+  mimicPrevZ = mimicZ   
+  mimicTargetX = mimicPlayerX - MIMICMINDIST
+  mimicTargetY = mimicPlayerY
+  mimicTargetZ = mimicPlayerZ
+
+func getPercentToTarget()
+  var part = mimicX - mimicPrevX
+  var whole = mimicTargetX - mimicPrevX
+  var percent = (part*1.0)/(whole*1.0)
+  return percent
+
+func getJumpYArch()
+  //creates a parabola between start and end points, with max height
+  //a = -jumpheight / (( mid - start )( mid - end ))
+  //(y(x) = ( x - start )( x - end )a
+  var MidMinusStart = getMidpoint()-mimicPrevX
+  var MidMinusEnd = getMidpoint()-mimicTargetX
+  var multi = (-MIMICMAXJUMP)/(MidMinusStart*MidMinusEnd)
+  var XMinusStart = mimicX-mimicPrevX+1
+  var XMinusEnd = mimicX-mimicTargetX+1
+  var result = XMinusStart*XMinusEnd*multi
+  return math.Round(result)
+  
+func getMidpoint()
+  return mimicPrevX + (mimicTargetX - mimicPrevX)/2
+
+func getXChange()
+  //how many characters mimic will move per frame
+  //start distance * MIMICMOVEPERCENT, rounded, minimum 1
+  return math.Max(1,
+  ^math.Round((mimicTargetX-mimicX)*MIMICMOVEPERCENT))
+  
+func getZChange()
+  ?mimicZ < mimicTargetZ
+    return 1
+  :?mimicZ > mimicTargetZ
+    return -1
+  :
+    return 0
