@@ -1,7 +1,7 @@
 /*
 Bouncing Pet Base
 written by Bitty45
-version 1.2.0
+version 1.2.1
 
 A base for bouncing pets, to make them super easy to make.
 Override EDITABLE VALUES and ART with what you want for your own pet.
@@ -118,7 +118,7 @@ func Main()
   playerZ = pos.z
   
   //reset
-  ?!petPnl
+  ?totalTime = 1
     initBouncePet()
     
   ?totTime = 1 | time = 1 & notRocky
